@@ -1,0 +1,124 @@
+//---------------------------------------------------------------------------
+
+
+#pragma hdrstop
+#include "RelayControl.h"
+
+
+//---------------------------------------------------------------------------
+
+#pragma package(smart_init)
+HANDLE Relay_hCom;
+bool bPSU_OPEN = false;
+
+DWORD cmd_TimeOut;
+cRelayControl::cRelayControl(void)
+{
+	RelayDeviceCOM = "";
+	//bCOM_PORT_OPEN = false;
+}
+void cRelayControl::SerCOMPort(AnsiString astrCOMPort)
+{
+	if(strlen(astrCOMPort.c_str())>4)
+	{
+		astrCOMPort = "\\\\.\\"+astrCOMPort;
+	}
+	RelayDeviceCOM =  astrCOMPort;
+}
+bool cRelayControl::open_psu_com()
+{
+	if(bPSU_OPEN) return 1;
+	DWORD WaitTime=GetTickCount()+2000;
+	while(1)
+	{
+		if(strstr(RelayDeviceCOM.c_str(),"COM"))
+		{
+			Relay_hCom = CreateFileA(RelayDeviceCOM.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL,
+				OPEN_EXISTING, 0, NULL);
+			if (Relay_hCom == INVALID_HANDLE_VALUE) {
+				Delay(100);
+				PSU_Stop();
+				Relay_hCom = CreateFileA(RelayDeviceCOM.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL,
+					OPEN_EXISTING, 0, NULL);
+				if (Relay_hCom == INVALID_HANDLE_VALUE){
+					CloseHandle(Relay_hCom);
+					return 0;
+				}
+			}
+			DCB dcb; // 設定comport相關係數
+			GetCommState(Relay_hCom, &dcb);
+			BuildCommDCB(L"2400,n,8,1", &dcb);
+			SetCommState(Relay_hCom, &dcb);
+			// 設定TimeOut
+			COMMTIMEOUTS TimeOut;
+			TimeOut.ReadIntervalTimeout = MAXDWORD;
+			TimeOut.ReadTotalTimeoutMultiplier = 0;
+			TimeOut.ReadTotalTimeoutConstant = 300;
+			TimeOut.WriteTotalTimeoutMultiplier  = 0;
+			TimeOut.WriteTotalTimeoutConstant  = 0;
+			SetCommTimeouts(Relay_hCom, &TimeOut);
+			bPSU_OPEN = true;
+			return 1;
+		}
+		else if(GetTickCount()>WaitTime)
+			return 0;
+		else Delay(100);
+	}
+}
+bool cRelayControl::CONTROL_RELAY_POWER(bool bTurnOn)
+{
+	if(open_psu_com())
+	{
+		int step = RS232_WRITE ;
+		DWORD Length;
+		int MaxLength = 5;
+		unsigned char write[5];
+		if(bTurnOn)
+		{
+			write[0]=0x00;
+			write[1]=0xAA;
+			write[2]=0xD8;
+			write[3]=0x55;
+			write[4]=0x01;
+		}
+		else
+		{
+			write[0]=0x00;
+			write[1]=0xAA;
+			write[2]=0xFF;
+			write[3]=0x55;
+			write[4]=0x01;
+        }
+		while(step)
+		{
+			switch(step)
+			{
+				case RS232_WRITE:
+				{
+					WriteFile(Relay_hCom,write,sizeof(write),&Length,NULL);
+					cmd_TimeOut=GetTickCount()+1000;
+					step=RS232_READ;
+					break;
+				}
+				case RS232_READ:
+					//讀
+					return true;
+			}
+		}
+	}
+	return false;
+}
+void cRelayControl::PSU_Stop() {
+	unsigned long Written ;
+
+	bPSU_OPEN = false;
+	//WriteFile(PSU_hCom,":OUTPut:STATe 0\n",strlen(":OUTPut:STATe 0\n"),&Written,NULL);
+	CloseHandle(Relay_hCom);
+}
+void cRelayControl::Delay(ULONG iMilliSeconds) // 原版delay time 用在thread裡面
+{
+	ULONG iStart;
+	iStart = GetTickCount();
+	while (GetTickCount() - iStart <= iMilliSeconds)
+		Application->ProcessMessages();
+}

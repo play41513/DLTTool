@@ -1,0 +1,72 @@
+//---------------------------------------------------------------------------
+
+#ifndef COM_controlH
+#define COM_controlH
+
+
+#define TEST_END			0
+#define RS232_WRITE			1
+#define RS232_READ			2
+#define LOAD_TEST_PASS		3
+#define LOAD_TEST_FAIL		4
+#define TEST_OCP			5
+#define Dev_NO_RESPOND		6
+#define TEST_SHORT_PASS     7
+#define TEST_SHORT_FAIL     8
+
+#define GetVoltageCount		3
+
+#define LOADER_3310F		150
+#define LOADER_3311F		300
+#define LOADER_3315F		75
+
+#define LOADER_OK			1
+#define LOADER_NOT_FIND		2
+#define LOADER_NO_SUPPORT	3
+
+#include "vcl.h"
+#include <Registry.hpp>
+#include <queue>
+
+//---------------------------------------------------------------------------
+class cCOM{
+	private:
+		HANDLE DEV_hCom;
+		AnsiString gVoltage;
+		DWORD dwGetErrorVolCount;
+		float total_current;
+		bool  bLoad;
+		DWORD cmd_TimeOut,dwGetDataTimeOut,dwShortTimeOut,dwGetVolCount;
+		DWORD cmd_get_system_consumptoin(char *s);
+	public:
+		cCOM::cCOM(void);
+
+		double GetNumOfString(AnsiString String);
+		DWORD 	open_dev_com();
+		int 	Dev_CMD_Test();
+		void 	search_Reg_ComNum();
+		void 	SearchDevCOM();
+		void	SetTestVoltage(AnsiString Voltage);
+		void 	SetMAX_WATT(DWORD MAX_WATT);
+		bool    CheckLoaderType();
+
+		void 	QueueClear();
+		void 	Dev_Stop();
+
+		bool 	bCOM_PORT_OPEN;
+		bool 	bNoResponse;
+		void    Delay(ULONG iMilliSeconds);
+		//
+		std::queue<AnsiString> que_cmd;
+		std::queue<AnsiString> que_Msg;
+		AnsiString astrVoltage;
+		double	dbShortCurrent,dbLoadCurrent,dbLossVol;
+		float	maxLoadVol,minLoadVol;
+		float	maxLoadCurr,minLoadCurr;
+		float	maxNoLoadVol,minNoLoadVol;
+		float	maxFullLoadVol,minFullLoadVol;
+		DWORD   dwLoadTimeOut;
+		DWORD   GetLoaderModel();
+
+};
+#endif

@@ -1,0 +1,38 @@
+//---------------------------------------------------------------------------
+
+#ifndef RelayControlH
+#define RelayControlH
+
+#include <string>
+#include <stdio.h>
+#include <queue>
+
+#define TEST_END			0
+#define RS232_WRITE			1
+#define RS232_READ			2
+#define PUS_TEST_PASS		3
+#define PUS_TEST_FAIL		4
+#define PSU_NO_RESPOND		5
+#define TEST_SHORT_CIRCUIT	6
+#define TEST_OPEN_CIRCUIT	7
+#define OPEN_PSU_OK			8
+
+
+//---------------------------------------------------------------------------
+class cRelayControl{
+	private:
+
+
+	public:
+		cRelayControl::cRelayControl(void);
+		AnsiString RelayDeviceCOM;
+		int		OPEN_PD_POWER();
+		bool 	open_psu_com();
+		void 	search_Reg_ComNum();
+		void 	SearchPSUCOM();
+
+		void 	QueueClear();
+		void 	PSU_Stop();
+
+};
+#endif
